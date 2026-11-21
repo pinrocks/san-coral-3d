@@ -1,7 +1,7 @@
 /* Street-Grid Radar Minimap,Tropical HUD & Safehouse Dialogs */
 
 const HEAT=['CLEAR · NO HEAT','HEAT 1 · PATROL','HEAT 2 · PURSUIT','HEAT 3 · INTERCEPT','HEAT 4 · METRO STRIKE','HEAT 5 · LOCKDOWN'];
-const PINS=[['PLAYA CORAL',255,-130],['MARINA DEL FARO',290,260],['FINANCIERO',0,-40],['BARRIO MIRADOR',-265,-40],['INDUSTRIAL',-280,270],['COLINAS DORADAS',-120,-320],['CAYO ESMERALDA',485,-35]];
+const PINS=[['PLAYA CORAL',255,-210],['MARINA DEL FARO',290,260],['FINANCIERO',0,-40],['BARRIO MIRADOR',-265,-40],['INDUSTRIAL',-280,270],['COLINAS DORADAS',-120,-320],['CAYO ESMERALDA',485,-35]];
 const $=(id)=>document.getElementById(id);
 const txt=(id,v)=>{ const e=$(id);if (e) e.textContent=v;};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -28,35 +28,29 @@ const setTab=(next='overview')=>{
 function renderSafehouseDeck() {
  if (!shDlg) return;
  txt('sh-cash',cash(P.cash));
- $('s-list').innerHTML=M.getSlotsSummary().map((s,i) =>
-   `<div class="slot-row${s.occupied?' is-populated' : ''}"><div>${s.occupied
-    ?`<span class="sm">Save Slot ${i+1}: ${s.actLabel} · ${s.progressPct}% · ${cash(s.cash)}</span><span class="ss">${s.savedAt||s.district} · Respect ${s.respect}</span>`
-     : `<span class="sm">Save Slot ${i+1}: Empty</span><span class="ss">Ready to record campaign</span>`}</div>` +
-   `<div class="sbtns"><button type="button" class="btn-tiny gold" data-save-slot="${i}">SAVE</button>` +
-   `<button type="button" class="btn-tiny turquoise" data-load-slot="${i}"${s.occupied?'' : ' disabled'}>LOAD</button></div></div>`
+ $('s-list').innerHTML=M.getSlotsSummary().map((s,i)=>
+  `<div class="slot-row${s.occupied?' is-populated':''}"><div>${s.occupied
+   ?`<span class="sm">Save Slot ${i+1}: ${s.actLabel} · ${s.progressPct}% · ${cash(s.cash)}</span><span class="ss">${s.savedAt||s.district} · Respect ${s.respect}</span>`
+   :`<span class="sm">Save Slot ${i+1}: Empty</span><span class="ss">Ready to record campaign</span>`}</div>`+
+  `<div class="sbtns"><button type="button" class="btn-tiny gold" data-save-slot="${i}">SAVE</button>`+
+  `<button type="button" class="btn-tiny turquoise" data-load-slot="${i}"${s.occupied?'':' disabled'}>LOAD</button></div></div>`
  ).join('');
-
  const ms=M.missions,done=new Set(M.completedIds);
- txt('c-prog',`${done.size >= 6?'ACT III' : done.size >= 3?'ACT II' : 'ACT I'} · ${Math.round((done.size / ms.length)*100)}% (${done.size}/${ms.length})`);
- const vis=tab==='missions'?ms : [ms[0],ms[4],ms[5]].filter(Boolean);
+ txt('c-prog',`${done.size>=6?'ACT III':done.size>=3?'ACT II':'ACT I'} · ${Math.round((done.size / ms.length)*100)}% (${done.size}/${ms.length})`);
+ const vis=tab==='missions'?ms:[ms[0],ms[4],ms[5]].filter(Boolean);
  $('m-list').innerHTML=vis.map((m,i)=>{
-   const d=done.has(m.id),act=M.activeMission?.id===m.id,cur=act||(!M.activeMission&&!d&&i===vis.length - 1);
-   return `<div class="mission-row${d?' is-done' : ''}${cur?' is-current' : ''}">` +
-     `<div><span class="mt">${m.act} · ${m.title}</span><span class="ms">${m.giver} · ${cash(m.rewardCash)}</span></div>` +
-     `<button type="button" class="btn-tiny ${act?'coral' : d?'' : 'turquoise'}" data-mid="${m.id}">${act?'ACTIVE' : d?'DONE' : 'START'}</button></div>`;
+  const d=done.has(m.id),act=M.activeMission?.id===m.id,cur=act||(!M.activeMission&&!d&&i===vis.length - 1);
+  return `<div class="mission-row${d?' is-done':''}${cur?' is-current':''}">`+
+   `<div><span class="mt">${m.act} · ${m.title}</span><span class="ms">${m.giver} · ${cash(m.rewardCash)}</span></div>`+
+   `<button type="button" class="btn-tiny ${act?'coral':d?'':'turquoise'}" data-mid="${m.id}">${act?'ACTIVE':d?'DONE':'START'}</button></div>`;
  }).join('');
-
- $('a-list').innerHTML=M.activities.slice(0,3).map((a) =>
-   `<button type="button" class="btn-tiny" data-aid="${a.id}">★ ${a.shortTitle||a.title}</button>`).join('');
-
+ $('a-list').innerHTML=M.activities.slice(0,3).map((a)=>`<button type="button" class="btn-tiny" data-aid="${a.id}">★ ${a.shortTitle||a.title}</button>`).join('');
  $('u-grid').innerHTML=M.upgrades.map((u)=>{
-   const own=Boolean(P.perks[u.perkKey]||P.perks[u.id]);
-   return `<div class="upgrade-card"><div><strong>${u.name}</strong><span>${u.summary||u.desc}</span></div>` +
-     `<button type="button" class="btn-tiny ${own?'turquoise' : 'gold'}" data-uid="${u.id}"${own?' disabled' : ''}>${own?'OWNED' : cash(u.cost)}</button></div>`;
+  const own=Boolean(P.perks[u.perkKey]||P.perks[u.id]);
+  return `<div class="upgrade-card"><div><strong>${u.name}</strong><span>${u.summary||u.desc}</span></div>`+
+   `<button type="button" class="btn-tiny ${own?'turquoise':'gold'}" data-uid="${u.id}"${own?' disabled':''}>${own?'OWNED':cash(u.cost)}</button></div>`;
  }).join('');
-
- txt('b-rad',`♫ ${A.getStationName()}`);
- txt('b-aud',A.isMuted()?'AUDIO: MUTED' : 'AUDIO: ON');
+ txt('b-rad',`♫ ${A.getStationName()}`);txt('b-aud',A.isMuted()?'AUDIO: MUTED':'AUDIO: ON');
  drawCanvas(mapCv,mapCtx,false);
 }
 
@@ -100,29 +94,28 @@ function drawCanvas(cv,ctx,mini) {
  }
 
  if (!mini) {
-   ctx.font='800 12px system-ui,sans-serif';ctx.textAlign='center';
-   for (const [lbl,dx,dz] of PINS) { const p=pt(dx,dz);box(ctx,p.x - 52,p.y - 9,104,15,'rgba(8,13,24,.78)');ctx.fillStyle='#e8f4ff';ctx.fillText(lbl,p.x,p.y+3);}
-   const sh=pt(W.safehouse.x,W.safehouse.z),pp=pt(P.x,P.z);
-   dot(ctx,sh.x,sh.y,6.5,'#2ee59d');dot(ctx,pp.x,pp.y,7,'#ff4d6d','#fff');
-   return;
+  ctx.font='800 12px system-ui,sans-serif';ctx.textAlign='center';
+  for (const [lbl,dx,dz] of PINS) { const p=pt(dx,dz),lx=clamp(p.x,64,w - 64),ly=clamp(p.y,12,h - 10);box(ctx,lx - 60,ly - 9,120,15,'rgba(8,13,24,.78)');ctx.fillStyle='#e8f4ff';ctx.fillText(lbl,lx,ly+3);}
+  const sh=pt(W.safehouse.x,W.safehouse.z),pp=pt(P.x,P.z);
+  dot(ctx,sh.x,sh.y,6.5,'#2ee59d');dot(ctx,pp.x,pp.y,7,'#ff4d6d','#fff');
+  return;
  }
-
  for (const c of VM.vehicles) {
-   if (c===v||c.destroyed||c.isPolice||Math.abs(c.x - cx) > 220||Math.abs(c.z - cz) > 220) continue;
-   const p=pt(c.x,c.z);box(ctx,p.x - 3,p.y - 3,6,6,c.isBoat?'#18e0cf' : '#9bb3d4');
+  if (c===v||c.destroyed||c.isPolice||Math.abs(c.x - cx) > 220||Math.abs(c.z - cz) > 220) continue;
+  const p=pt(c.x,c.z);box(ctx,p.x - 3,p.y - 3,6,6,c.isBoat?'#18e0cf':'#9bb3d4');
  }
  for (const ped of LS.pedestrians) {
-   if (ped.dead||Math.abs(ped.x - cx) > 160||Math.abs(ped.z - cz) > 160) continue;
-   const p=pt(ped.x,ped.z);dot(ctx,p.x,p.y,ped.isHostile?4.5 : 2.6,ped.isHostile?'#ff4d6d' : '#67e8f9');
+  if (ped.dead||Math.abs(ped.x - cx) > 160||Math.abs(ped.z - cz) > 160) continue;
+  const p=pt(ped.x,ped.z);dot(ctx,p.x,p.y,ped.isHostile?4.5:2.6,ped.isHostile?'#ff4d6d':'#67e8f9');
  }
  const red=Math.sin(flash*11) > 0;
  for (const u of WS.getMinimapUnits()) {
-   const p=pt(u.x,u.z);
-   if (u.type==='heli') {
-     ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,10,0,6.29);
-     ctx.moveTo(p.x - 11,p.y - 11);ctx.lineTo(p.x+11,p.y+11);ctx.moveTo(p.x+11,p.y - 11);ctx.lineTo(p.x - 11,p.y+11);ctx.stroke();
-   } else if (u.type==='roadblock') box(ctx,p.x - 8,p.y - 3,16,6,'#ffbe3b');
-   else dot(ctx,p.x,p.y,6.5,(u.sirenPhase?u.sirenPhase==='red' : red)?'#ff4d6d' : '#3b82f6');
+  const p=pt(u.x,u.z);
+  if (u.type==='heli') {
+   ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,10,0,6.29);
+   ctx.moveTo(p.x - 11,p.y - 11);ctx.lineTo(p.x+11,p.y+11);ctx.moveTo(p.x+11,p.y - 11);ctx.lineTo(p.x - 11,p.y+11);ctx.stroke();
+  } else if (u.type==='roadblock') box(ctx,p.x - 8,p.y - 3,16,6,'#ffbe3b');
+  else dot(ctx,p.x,p.y,6.5,(u.sirenPhase?u.sirenPhase==='red':red)?'#ff4d6d':'#3b82f6');
  }
  const bc=ovr?.beacon||M.activeBeacon;
  if (bc) { const b=pt(bc.x,bc.z);dot(ctx,clamp(b.x,18,w - 18),clamp(b.y,18,h - 18),9,'#ffbe3b','#09101d');}
@@ -168,55 +161,45 @@ mapCv?.addEventListener('click',(e)=>{
 });
 
 function update(dt) {
- flash += dt;
- if (toastT > 0&&(toastT -= dt) <= 0) $('toast').hidden=true;
- const ov=ovr||{},v=P.inVehicle,px=v?v.x : P.x,pz=v?v.z : P.z;
+ flash += dt;if (toastT > 0&&(toastT -= dt) <= 0) $('toast').hidden=true;
+ const ov=ovr||{},v=P.inVehicle,px=v?v.x:P.x,pz=v?v.z:P.z;
  const heat=ov.wantedLevel ?? WS.level,seen=WS.inSight !== false,wb=$('w-box');
  wb.dataset.heat=String(heat);
- if (heat > 0) wb.dataset.alert=Math.sin(flash*10) > 0?'police' : 'blue';else delete wb.dataset.alert;
+ if (heat > 0) wb.dataset.alert=Math.sin(flash*10) > 0?'police':'blue';else delete wb.dataset.alert;
  stars.forEach((s,i)=>{ s.classList.toggle('is-lit',i < heat);s.classList.toggle('is-evading',i < heat&&!seen&&Math.sin(flash*14) < 0);});
  txt('w-lbl',ov.wantedLabel||WS.statusLabel||HEAT[heat]||HEAT[0]);
  txt('h-cash',cash(ov.cash ?? P.cash));txt('h-resp',`RESPECT ${Math.round(P.respect)}`);
  $('hp-fill').style.width=`${clamp((P.hp / P.maxHp)*100,0,100)}%`;txt('hp-val',Math.round(P.hp));
  $('armor-fill').style.width=`${clamp((P.armor / P.maxArmor)*100,0,100)}%`;txt('armor-val',Math.round(P.armor));
-
  const wi=P.weaponIndex,wo=P.weapons[wi];
  txt('w-slot',`[${wi+1}]`);txt('wp-name',String(ov.weaponName||wo.name).toUpperCase());
- txt('wp-ammo',ov.weaponAmmo||(wo.id==='fist'?'MELEE · READY' : `${wo.ammoInClip} / ${wo.ammoReserve}`));
-
+ txt('wp-ammo',ov.weaponAmmo||(wo.id==='fist'?'MELEE · READY':`${wo.ammoInClip} / ${wo.ammoReserve}`));
  const am=M.activeMission;
  if (ov.missionTitle||am) {
-   const mt=(ov.missionTag||`${am.act} · STORY MISSION`).toUpperCase();
-   txt('m-tag',mt);txt('h-act',mt);txt('m-tit',String(ov.missionTitle||am.title).toUpperCase());
-   txt('m-obj',ov.missionObjective||M.currentStep?.objective||am.summary);
+  const mt=(ov.missionTag||`${am.act} · STORY MISSION`).toUpperCase();
+  txt('m-tag',mt);txt('h-act',mt);txt('m-tit',String(ov.missionTitle||am.title).toUpperCase());
+  txt('m-obj',ov.missionObjective||M.currentStep?.objective||am.summary);
  } else {
-   txt('m-tag','SAN CORAL · OPEN WORLD');txt('m-tit','VILLA SOLIS SYNDICATE WIRE');
-   txt('m-obj','Enter a golden mission ring or press [P] for Campaign Deck');
+  txt('m-tag','SAN CORAL · OPEN WORLD');txt('m-tit','VILLA SOLIS SYNDICATE WIRE');
+  txt('m-obj','Enter a golden mission ring or press [P] for Campaign Deck');
  }
-
  const ret=$('aim-reticle');
  ret.hidden=!Boolean(ov.showReticle||(!v&&(P.aiming||P.muzzleFlashTimer > 0)));
  ret.classList.toggle('is-firing',Boolean(ov.firing||P.muzzleFlashTimer > 0));
-
- const pr=$('w-prm'),nv=!v?VM.findNearestInteractable(px,pz,5.2) : null;
+ const pr=$('w-prm'),nv=!v?VM.findNearestInteractable(px,pz,5.2):null;
  if (ov.worldPrompt) { pr.hidden=false;txt('p-key',ov.worldPromptKey||'F');txt('p-txt',ov.worldPrompt);}
- else if (nv) { pr.hidden=false;txt('p-key','F');txt('p-txt',`${nv.isBoat?'Board' : 'Steal'} ${nv.name}`);}
+ else if (nv) { pr.hidden=false;txt('p-key','F');txt('p-txt',`${nv.isBoat?'Board':'Steal'} ${nv.name}`);}
  else if (!v&&Math.hypot(px - W.safehouse.x,pz - W.safehouse.z) < 9) { pr.hidden=false;txt('p-key','P');txt('p-txt','Open Villa Solis Safehouse');}
  else pr.hidden=true;
-
  const dg=ov.dialogue||M.activeDialogue;
  $('d-box').hidden=!(dg&&dg.text);
  if (dg?.text) { txt('d-spk',String(dg.speaker).toUpperCase());txt('d-txt',dg.text);}
-
- txt('h-dist',String(W.getDistrictAt(px,pz)).toUpperCase());
- txt('h-clk',clock(W.getTimeOfDay()));
+ txt('h-dist',String(W.getDistrictAt(px,pz)).toUpperCase());txt('h-clk',clock(W.getTimeOfDay()));
  $('v-hud').hidden=!v;$('f-hud').hidden=Boolean(v);
  if (v) {
-   txt('speed-val',ov.speedKmh ?? Math.round(Math.abs(v.speedKmh)));
-   txt('v-name',String(v.name).toUpperCase());
-   txt('gear-pill',v.isBoat?'TWIN JET' : `GEAR ${ov.gear||v.gear}`);
-   $('nitro-fill').style.width=`${clamp(v.nitro,8,100)}%`;
-   txt('r-txt',A.getStationName());
+  txt('speed-val',ov.speedKmh ?? Math.round(Math.abs(v.speedKmh)));txt('v-name',String(v.name).toUpperCase());
+  txt('gear-pill',v.isBoat?'TWIN JET':`GEAR ${ov.gear||v.gear}`);$('nitro-fill').style.width=`${clamp(v.nitro,8,100)}%`;
+  txt('r-txt',A.getStationName());
  }
  drawCanvas(miniCv,miniCtx,true);
 }

@@ -1,38 +1,27 @@
 import * as THREE from 'three';
 import { createRng } from './rng.js';
 
-/* Sculpted 3D Vehicles, Semi-Arcade Drift/Nitro Physics, Speedboats & VFX */
+/* Sculpted 3D Vehicles, Drift/Nitro Physics, Speedboats & VFX */
 
-const { Group, Mesh, BoxGeometry, CylinderGeometry, ConeGeometry, PlaneGeometry, SphereGeometry, PointLight, Color, MeshStandardMaterial, MeshBasicMaterial } = THREE;
+const { Group, Mesh, BoxGeometry, CylinderGeometry, ConeGeometry, PlaneGeometry, SphereGeometry, PointLight, Color } = THREE;
 const { clamp } = THREE.MathUtils;
 const { sin, cos, hypot, abs, max, min, PI, round, floor, sqrt } = Math;
+const std = (color, roughness = 0.3, metalness = 0.25, e = {}) => new THREE.MeshStandardMaterial({ color, roughness, metalness, ...e });
+const bas = (color, e = {}) => new THREE.MeshBasicMaterial({ color, ...e });
 
-const std = (color, roughness = 0.3, metalness = 0.25, extra = {}) =>
-  new MeshStandardMaterial({ color, roughness, metalness, ...extra });
-const bas = (color, extra = {}) => new MeshBasicMaterial({ color, ...extra });
-
-const ARCH_ROWS = [
+export const VEHICLE_ARCHETYPES = Object.fromEntries([
   ['veloz', 'Veloz GT', 46, 28, 36, 2.45, 7.5, 2.3, 120, 1.95, 4.5, 2.05, 0, ['#ff4d6d', '#18e0cf', '#ffbe3b', '#fb7185']],
   ['bravo', 'Bravo V8', 40, 24, 32, 2.25, 6.8, 2.1, 135, 2.0, 4.65, 2.05, 0, ['#ffbe3b', '#f97316', '#38bdf8', '#f43f5e']],
   ['toro', 'Toro 4x4', 34, 20, 30, 1.95, 7.2, 2.8, 210, 2.2, 4.9, 2.25, 0, ['#1e293b', '#334155', '#dc2626', '#d97706']],
   ['rayo', 'Rayo 900', 45, 31, 38, 2.95, 8.4, 2.9, 85, 1.15, 2.35, 0.85, 4, ['#18e0cf', '#ff4d6d', '#a855f7', '#facc15']],
   ['patrulla', 'Guardia Interceptor', 44, 27, 35, 2.4, 7.8, 2.5, 160, 2.0, 4.65, 2.05, 1, ['#0f172a']],
   ['marlin', 'Marlin Jet', 42, 24, 20, 2.1, 4.6, 2.0, 150, 2.3, 6.2, 2.45, 2, ['#f8fafc', '#18e0cf', '#ff4d6d']]
-];
-
-export const VEHICLE_ARCHETYPES = Object.fromEntries(
-  ARCH_ROWS.map(([type, name, maxSpeed, accel, brake, turnRate, grip, driftGrip, maxHp, radius, length, width, fl, palette]) => [
-    type,
-    { type, name, maxSpeed, accel, brake, turnRate, grip, driftGrip, maxHp, radius, length, width, isPolice: Boolean(fl & 1), isBoat: Boolean(fl & 2), isBike: Boolean(fl & 4), palette }
-  ])
-);
+].map(([t, n, ms, ac, br, tr, gp, dg, mh, rd, ln, wd, fl, palette]) => [
+  t, { type: t, name: n, maxSpeed: ms, accel: ac, brake: br, turnRate: tr, grip: gp, driftGrip: dg, maxHp: mh, radius: rd, length: ln, width: wd, isPolice: Boolean(fl & 1), isBoat: Boolean(fl & 2), isBike: Boolean(fl & 4), palette }
+]));
 
 function box(p, w, h, d, m, x, y, z, rx = 0) {
-  const mesh = new Mesh(new BoxGeometry(w, h, d), m);
-  mesh.position.set(x, y, z);
-  if (rx) mesh.rotation.x = rx;
-  p.add(mesh);
-  return mesh;
+  const mesh = new Mesh(new BoxGeometry(w, h, d), m); mesh.position.set(x, y, z); if (rx) mesh.rotation.x = rx; p.add(mesh); return mesh;
 }
 
 function buildMesh(arch, colorHex) {
@@ -42,7 +31,7 @@ function buildMesh(arch, colorHex) {
   const wh = std(0xf8fafc, 0.3, 0.1), gl = std(0x8be4ff, 0.12, 0.72, { transparent: true, opacity: 0.78 });
   const hd = bas(0xfff8d6), bm = bas(0x991b1b), fm = bas(0x22d3ee, { transparent: true, opacity: 0.9 });
   const wl = [], nf = [];
-  let sr = null, sb = null, sl = null;
+  let sr = null, sb = null, sl = null, gr = null, gb = null;
   const flm = (r, len, x, y, z) => {
     const f = new Mesh(new ConeGeometry(r, len, 7), fm);
     f.rotation.x = -PI * 0.5; f.position.set(x, y, z); f.visible = false; bg.add(f); nf.push(f);
@@ -86,10 +75,15 @@ function buildMesh(arch, colorHex) {
       box(bg, w * 0.78, 0.1, l * 0.48, dk, 0, yB + hB + 0.72, -0.12);
     } else if (arch.isPolice) {
       box(bg, w * 0.68, 0.42, 0.2, dk, 0, yB + 0.32, l * 0.5 + 0.09);
-      box(bg, 1.18, 0.12, 0.28, dk, 0, yB + hB + 0.58, -0.05);
-      sr = box(bg, 0.52, 0.16, 0.26, bas(0xff2442), -0.3, yB + hB + 0.64, -0.05);
-      sb = box(bg, 0.52, 0.16, 0.26, bas(0x2563eb), 0.3, yB + hB + 0.64, -0.05);
-      sl = new PointLight(0xff2442, 2.2, 18); sl.position.set(0, yB + hB + 1.05, -0.05); bg.add(sl);
+      box(bg, 1.34, 0.12, 0.36, dk, 0, yB + hB + 0.58, -0.05);
+      sr = box(bg, 0.62, 0.22, 0.34, bas(0xff1744), -0.34, yB + hB + 0.66, -0.05);
+      sb = box(bg, 0.62, 0.22, 0.34, bas(0x00b0ff), 0.34, yB + hB + 0.66, -0.05);
+      const gg = new SphereGeometry(0.46, 10, 8);
+      gr = new Mesh(gg, bas(0xff1744, { transparent: true, opacity: 0.55, depthWrite: false }));
+      gb = new Mesh(gg, bas(0x00b0ff, { transparent: true, opacity: 0.55, depthWrite: false }));
+      gr.position.set(-0.34, yB + hB + 0.68, -0.05); gb.position.set(0.34, yB + hB + 0.68, -0.05);
+      sl = new PointLight(0xff1744, 5.5, 24); sl.position.set(0, yB + hB + 1.15, -0.05);
+      bg.add(gr, gb, sl);
     }
     for (const sx of [-w * 0.34, w * 0.34]) {
       box(bg, 0.36, 0.16, 0.08, hd, sx, yB + hB * 0.58, l * 0.5 + 0.02);
@@ -100,112 +94,88 @@ function buildMesh(arch, colorHex) {
       exh.rotation.x = PI * 0.5; exh.position.set(sx, yB + 0.12, -l * 0.5 - 0.08); bg.add(exh);
       flm(0.18, 1.05, sx, yB + 0.14, -l * 0.5 - 0.65);
     }
-    const wr = type === 'toro' ? 0.44 : 0.36;
-    const wGeo = new CylinderGeometry(wr, wr, 0.28, 14); wGeo.rotateZ(PI * 0.5);
-    const rGeo = new CylinderGeometry(wr * 0.56, wr * 0.56, 0.3, 10); rGeo.rotateZ(PI * 0.5);
-    const rMat = std(0xcbd5e1, 0.3, 0.65);
+    const wr = type === 'toro' ? 0.44 : 0.36, wG = new CylinderGeometry(wr, wr, 0.28, 14), rG = new CylinderGeometry(wr * 0.56, wr * 0.56, 0.3, 10), rM = std(0xcbd5e1, 0.3, 0.65);
+    wG.rotateZ(PI * 0.5); rG.rotateZ(PI * 0.5);
     for (const wx of [-w * 0.48, w * 0.48]) for (const wz of [-l * 0.31, l * 0.32]) {
       box(bg, 0.14, 0.28, 0.84, dk, wx, yB + 0.1, wz);
-      const wg = new Group(); wg.position.set(wx, wr, wz);
-      wg.add(new Mesh(wGeo, dk), new Mesh(rGeo, rMat));
-      group.add(wg); wl.push(wg);
+      const wg = new Group(); wg.position.set(wx, wr, wz); wg.add(new Mesh(wG, dk), new Mesh(rG, rM)); group.add(wg); wl.push(wg);
     }
   }
-  return { group, bg, pm, bm, wl, nf, sr, sb, sl };
+  return { group, bg, pm, bm, wl, nf, sr, sb, sl, gr, gb };
 }
 
 export function createVehicleManager(scene, world, rngInput) {
-  const rng = rngInput || createRng(19);
+  const rng = rngInput || createRng(19), { isWater: isW, resolveCircleCollision: rCol, getGroundHeight: gh } = world;
   const list = [], pts = [], skids = [];
   let nextId = 1, clock = 0;
-  const puffGeo = new SphereGeometry(0.45, 8, 7), skidGeo = new PlaneGeometry(0.32, 1.35);
-  skidGeo.rotateX(-PI * 0.5);
+  const pg = new SphereGeometry(0.45, 8, 7), sg = new PlaneGeometry(0.32, 1.35); sg.rotateX(-PI * 0.5);
 
   function puff(x, y, z, vx, vy, vz, col, scale, life) {
     if (pts.length > 320) return;
-    const mat = bas(col, { transparent: true, opacity: 0.85 }), mesh = new Mesh(puffGeo, mat);
+    const mat = bas(col, { transparent: true, opacity: 0.85 }), mesh = new Mesh(pg, mat);
     mesh.position.set(x, y, z); mesh.scale.setScalar(scale); scene.add(mesh);
     pts.push({ mesh, mat, vx, vy, vz, scale, age: 0, life });
   }
 
   function skid(x, y, z, hdg) {
     if (skids.length > 140) { const o = skids.shift(); o.mesh.parent?.remove(o.mesh); }
-    const mat = bas(0x0f131a, { transparent: true, opacity: 0.58, depthWrite: false }), mesh = new Mesh(skidGeo, mat);
+    const mat = bas(0x0f131a, { transparent: true, opacity: 0.58, depthWrite: false }), mesh = new Mesh(sg, mat);
     mesh.position.set(x, y + 0.08, z); mesh.rotation.y = hdg; scene.add(mesh);
     skids.push({ mesh, mat, age: 0, life: 7 });
   }
 
-  function spawnVehicle(type = 'veloz', x = 0, z = 0, heading = 0, opts = {}) {
-    const arch = VEHICLE_ARCHETYPES[type] || VEHICLE_ARCHETYPES.veloz;
-    const colorHex = opts.colorHex || rng.pick(arch.palette), parts = buildMesh(arch, colorHex);
-    const y = arch.isBoat && world.isWater(x, z) ? -0.15 : world.getGroundHeight(x, z);
+  function spawnVehicle(type = 'veloz', x = 0, z = 0, heading = 0, o = {}) {
+    const a = VEHICLE_ARCHETYPES[type] || VEHICLE_ARCHETYPES.veloz, colorHex = o.colorHex || rng.pick(a.palette), parts = buildMesh(a, colorHex);
+    const y = a.isBoat && isW(x, z) ? -0.15 : gh(x, z), spd = o.speed || 0;
     parts.group.position.set(x, y, z); parts.group.rotation.y = heading; scene.add(parts.group);
-    const spd = opts.speed || 0;
     const v = {
-      id: nextId++, type: arch.type, name: arch.name, arch, mesh: parts.group, parts,
+      id: nextId++, type: a.type, name: a.name, arch: a, mesh: parts.group, parts,
       x, y, z, vx: sin(heading) * spd, vz: cos(heading) * spd, heading, speed: spd,
-      speedKmh: round(abs(spd) * 3.6), gear: spd > 1 ? min(6, 1 + floor((abs(spd) / arch.maxSpeed) * 5)) : 1,
-      rpm: 950, drifting: Boolean(opts.drifting), boosting: Boolean(opts.boosting),
-      nitro: 100, maxNitro: 100, hp: opts.hp ?? arch.maxHp, maxHp: arch.maxHp,
-      isPolice: arch.isPolice, isBoat: arch.isBoat, isBike: arch.isBike, colorHex,
-      driverType: opts.driverType || 'parked', persistent: Boolean(opts.persistent), destroyed: false,
-      sirenOn: opts.sirenOn !== undefined ? Boolean(opts.sirenOn) : arch.isPolice && opts.driverType === 'police',
+      speedKmh: round(abs(spd) * 3.6), gear: spd > 1 ? min(6, 1 + floor((abs(spd) / a.maxSpeed) * 5)) : 1,
+      rpm: 950, drifting: Boolean(o.drifting), boosting: Boolean(o.boosting),
+      nitro: 100, maxNitro: 100, hp: o.hp ?? a.maxHp, maxHp: a.maxHp,
+      isPolice: a.isPolice, isBoat: a.isBoat, isBike: a.isBike, colorHex,
+      driverType: o.driverType || 'parked', persistent: Boolean(o.persistent), destroyed: false,
+      sirenOn: o.sirenOn !== undefined ? Boolean(o.sirenOn) : a.isPolice && o.driverType === 'police',
       sp: rng.range(0, 6.28), st: 0
     };
-    list.push(v);
-    return v;
+    list.push(v); return v;
   }
 
-  function removeVehicle(v) {
-    const i = list.indexOf(v);
-    if (i !== -1) list.splice(i, 1);
-    v?.mesh?.parent?.remove(v.mesh);
-  }
+  function removeVehicle(v) { const i = list.indexOf(v); if (i !== -1) list.splice(i, 1); v?.mesh?.parent?.remove(v.mesh); }
+  function clearDynamicVehicles() { for (let i = list.length - 1; i >= 0; i--) if (!list[i].persistent && list[i].driverType !== 'player') removeVehicle(list[i]); }
 
-  function clearDynamicVehicles() {
-    for (let i = list.length - 1; i >= 0; i--) if (!list[i].persistent && list[i].driverType !== 'player') removeVehicle(list[i]);
-  }
-
-  function findNearestInteractable(x, z, maxDist = 5.5) {
-    let best = null, bd2 = maxDist * maxDist;
-    for (const v of list) {
-      if (v.destroyed) continue;
-      const d2 = (v.x - x) ** 2 + (v.z - z) ** 2;
-      if (d2 <= bd2) { bd2 = d2; best = v; }
-    }
+  function findNearestInteractable(x, z, md = 5.5) {
+    let best = null, bd = md * md;
+    for (const v of list) if (!v.destroyed) { const d = (v.x - x) ** 2 + (v.z - z) ** 2; if (d <= bd) { bd = d; best = v; } }
     return best;
   }
 
-  function damageVehicle(v, amount, onExplode) {
+  function damageVehicle(v, amt, cb) {
     if (!v || v.destroyed) return false;
-    v.hp = max(0, v.hp - amount);
-    if (v.hp > 0) return false;
-    v.destroyed = true; v.sirenOn = v.boosting = false;
-    v.parts.pm.color.setHex(0x262626); v.parts.pm.roughness = 0.92;
-    const fc = new Mesh(new SphereGeometry(1.35, 12, 10), bas(0xff7b24, { transparent: true, opacity: 0.88 }));
-    fc.position.set(0, 1.15, 0.25);
-    const fg = new PointLight(0xff6a1a, 3.2, 22); fg.position.set(0, 2.2, 0);
-    v.mesh.add(fc, fg); v.fc = fc;
+    v.hp = max(0, v.hp - amt); if (v.hp > 0) return false;
+    v.destroyed = true; v.sirenOn = v.boosting = false; v.parts.pm.color.setHex(0x262626); v.parts.pm.roughness = 0.92;
+    const fc = new Mesh(new SphereGeometry(1.35, 12, 10), bas(0xff7b24, { transparent: true, opacity: 0.88 })), fg = new PointLight(0xff6a1a, 3.2, 22);
+    fc.position.set(0, 1.15, 0.25); fg.position.set(0, 2.2, 0); v.mesh.add(fc, fg); v.fc = fc;
     for (let i = 0; i < 22; i++) {
       const a = (i / 22) * PI * 2, s = 2.5 + rng.range(0, 6.5);
-      puff(v.x + cos(a) * 0.8, v.y + 0.9 + rng.range(0, 0.8), v.z + sin(a) * 0.8, cos(a) * s, 3.2 + rng.range(0, 4.5), sin(a) * s, i % 3 === 0 ? 0xff4d2a : i % 3 === 1 ? 0xffbe3b : 0x334155, 1.15 + rng.range(0, 0.95), 1.8 + rng.range(0, 0.9));
+      puff(v.x + cos(a) * 0.8, v.y + 0.9 + rng.range(0, 0.8), v.z + sin(a) * 0.8, cos(a) * s, 3.2 + rng.range(0, 4.5), sin(a) * s, [0xff4d2a, 0xffbe3b, 0x334155][i % 3], 1.15 + rng.range(0, 0.95), 1.8 + rng.range(0, 0.9));
     }
-    onExplode?.(v);
-    return true;
+    cb?.(v); return true;
   }
 
   function readCtrl(inp) {
     if (!inp) return { th: 0, br: 0, st: 0, hb: false, bs: false };
-    const k = inp.keys || {};
-    const up = Boolean(inp.forward || inp.up || inp.w || k.KeyW || k.ArrowUp || inp.throttle > 0);
-    const dn = Boolean(inp.backward || inp.down || inp.s || k.KeyS || k.ArrowDown || inp.brake > 0);
-    const lf = Boolean(inp.left || inp.a || k.KeyA || k.ArrowLeft), rt = Boolean(inp.right || inp.d || k.KeyD || k.ArrowRight);
+    const k = inp.keys, hk = (c) => Boolean(k?.has ? k.has(c) : k?.[c]);
+    const up = Boolean(inp.forward || inp.up || inp.w || hk('KeyW') || hk('ArrowUp') || inp.throttle > 0);
+    const dn = Boolean(inp.backward || inp.down || inp.s || hk('KeyS') || hk('ArrowDown') || inp.brake > 0);
+    const lf = Boolean(inp.left || inp.a || hk('KeyA') || hk('ArrowLeft')), rt = Boolean(inp.right || inp.d || hk('KeyD') || hk('ArrowRight'));
     return {
       th: typeof inp.throttle === 'number' ? inp.throttle : up ? 1 : 0,
       br: typeof inp.brake === 'number' ? inp.brake : dn ? 1 : 0,
       st: typeof inp.steer === 'number' && inp.steer !== 0 ? inp.steer : (lf ? 1 : 0) - (rt ? 1 : 0),
-      hb: Boolean(inp.handbrake || inp.space || inp.drift || k.Space),
-      bs: Boolean(inp.boost || inp.sprint || inp.shift || k.ShiftLeft || k.ShiftRight)
+      hb: Boolean(inp.handbrake || inp.space || inp.drift || hk('Space')),
+      bs: Boolean(inp.boost || inp.sprint || inp.shift || hk('ShiftLeft') || hk('ShiftRight'))
     };
   }
 
@@ -242,23 +212,16 @@ export function createVehicleManager(scene, world, rngInput) {
 
       v.x += v.vx * s; v.z += v.vz * s;
       if (v.isBoat) {
-        if (!world.isWater(v.x, v.z)) { v.x -= v.vx * s * 1.2; v.z -= v.vz * s * 1.2; v.vx *= -0.25; v.vz *= -0.25; }
+        if (!isW(v.x, v.z)) { v.x -= v.vx * s * 1.2; v.z -= v.vz * s * 1.2; v.vx *= -0.25; v.vz *= -0.25; }
         v.y = -0.14 + sin(clock * 4 + v.id) * 0.06;
       } else {
-        const col = world.resolveCircleCollision(v.x, v.z, a.radius);
-        if (col.hit) {
-          v.x = col.x; v.z = col.z;
-          const vn = v.vx * col.nx + v.vz * col.nz;
-          if (vn < 0) { v.vx -= col.nx * vn * 1.35; v.vz -= col.nz * vn * 1.35; }
-        }
-        if (world.isWater(v.x, v.z)) { v.vx *= 0.85; v.vz *= 0.85; v.y = -0.55; }
-        else v.y = world.getGroundHeight(v.x, v.z);
+        const col = rCol(v.x, v.z, a.radius);
+        if (col.hit) { v.x = col.x; v.z = col.z; const vn = v.vx * col.nx + v.vz * col.nz; if (vn < 0) { v.vx -= col.nx * vn * 1.35; v.vz -= col.nz * vn * 1.35; } }
+        if (isW(v.x, v.z)) { v.vx *= 0.85; v.vz *= 0.85; v.y = -0.55; } else v.y = gh(v.x, v.z);
       }
-
       if (v.fc) { const fl = 0.88 + sin(clock * 18 + v.id) * 0.15; v.fc.scale.set(fl, fl * 1.22, fl); }
       v.speed = hypot(v.vx, v.vz); v.speedKmh = round(v.speed * 3.6);
-      const r = v.speed / a.maxSpeed;
-      v.gear = clamp(1 + floor(r * 5.4), 1, 6);
+      const r = v.speed / a.maxSpeed; v.gear = clamp(1 + floor(r * 5.4), 1, 6);
       v.rpm = round(900 + ((r * 5.4) % 1) * 5200 + (v.boosting ? 1100 : 0));
       v.mesh.position.set(v.x, v.y, v.z); v.mesh.rotation.y = v.heading;
 
@@ -267,12 +230,13 @@ export function createVehicleManager(scene, world, rngInput) {
 
       if (v.isPolice && p.sr) {
         if (v.sirenOn && !v.destroyed) {
-          v.sp += s * 14;
-          const rh = sin(v.sp) > 0;
-          p.sr.material.color.setHex(rh ? 0xff1e42 : 0x450a14);
-          p.sb.material.color.setHex(rh ? 0x102a6b : 0x38bdf8);
-          if (p.sl) { p.sl.intensity = 2.8; p.sl.color.setHex(rh ? 0xff1e42 : 0x38bdf8); }
-        } else if (p.sl) p.sl.intensity = 0;
+          v.sp += s * 14; const rh = sin(v.sp) > 0;
+          p.sr.material.color.setHex(rh ? 0xff1744 : 0xc41235); p.sb.material.color.setHex(rh ? 0x0288d1 : 0x00b0ff);
+          p.gr.visible = p.gb.visible = true;
+          p.gr.material.opacity = rh ? 0.64 : 0.34; p.gr.scale.setScalar(rh ? 1.12 : 0.84);
+          p.gb.material.opacity = rh ? 0.34 : 0.64; p.gb.scale.setScalar(rh ? 0.84 : 1.12);
+          if (p.sl) { p.sl.intensity = 5.5; p.sl.color.setHex(rh ? 0xff1744 : 0x00b0ff); }
+        } else { p.gr.visible = p.gb.visible = false; if (p.sl) p.sl.intensity = 0; }
       }
 
       v.st -= s;
@@ -281,15 +245,12 @@ export function createVehicleManager(scene, world, rngInput) {
         if (v.drifting && v.speed > 4 && !v.isBoat) {
           v.st = 0.04;
           const bx = v.x - sh * a.length * 0.36, bz = v.z - ch * a.length * 0.36, rx = ch * a.width * 0.42, rz = -sh * a.width * 0.42;
-          puff(bx + rx, v.y + 0.26, bz + rz, 0, 1.15, 0, 0xf8fafc, 0.72, 0.72);
-          puff(bx - rx, v.y + 0.26, bz - rz, 0, 1.15, 0, 0xf8fafc, 0.72, 0.72);
+          puff(bx + rx, v.y + 0.26, bz + rz, 0, 1.15, 0, 0xf8fafc, 0.72, 0.72); puff(bx - rx, v.y + 0.26, bz - rz, 0, 1.15, 0, 0xf8fafc, 0.72, 0.72);
           skid(bx + rx, v.y, bz + rz, v.heading); skid(bx - rx, v.y, bz - rz, v.heading);
-        } else if (v.isBoat && v.speed > 2.5 && world.isWater(v.x, v.z)) {
-          v.st = 0.05;
-          puff(v.x - sh * 3.1 + rng.range(-0.9, 0.9), v.y + 0.08, v.z - ch * 3.1 + rng.range(-0.9, 0.9), 0, 0.35, 0, 0xe0faff, 0.78, 0.75);
+        } else if (v.isBoat && v.speed > 2.5 && isW(v.x, v.z)) {
+          v.st = 0.05; puff(v.x - sh * 3.1 + rng.range(-0.9, 0.9), v.y + 0.08, v.z - ch * 3.1 + rng.range(-0.9, 0.9), 0, 0.35, 0, 0xe0faff, 0.78, 0.75);
         } else if ((v.destroyed || v.hp < v.maxHp * 0.45) && !v.isBoat) {
-          v.st = 0.09;
-          puff(v.x + rng.range(-0.5, 0.5), v.y + 1.1, v.z + rng.range(-0.5, 0.5), 0, 2.2, 0, v.destroyed && rng.chance(0.45) ? 0xff6b2b : 0x334155, 0.85, 1.1);
+          v.st = 0.09; puff(v.x + rng.range(-0.5, 0.5), v.y + 1.1, v.z + rng.range(-0.5, 0.5), 0, 2.2, 0, v.destroyed && rng.chance(0.45) ? 0xff6b2b : 0x334155, 0.85, 1.1);
         }
       }
     }
@@ -297,14 +258,13 @@ export function createVehicleManager(scene, world, rngInput) {
     for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
       const a = list[i], b = list[j];
       if (a.isBoat !== b.isBoat) continue;
-      const minR = a.arch.radius + b.arch.radius - 0.35, dx = b.x - a.x, dz = b.z - a.z, d2 = dx * dx + dz * dz;
-      if (d2 > 1e-4 && d2 < minR * minR) {
-        const d = sqrt(d2), ov = (minR - d) * 0.5;
-        a.x -= (dx / d) * ov; a.z -= (dz / d) * ov; b.x += (dx / d) * ov; b.z += (dz / d) * ov;
+      const mr = a.arch.radius + b.arch.radius - 0.35, dx = b.x - a.x, dz = b.z - a.z, d2 = dx * dx + dz * dz;
+      if (d2 > 1e-4 && d2 < mr * mr) {
+        const d = sqrt(d2), ov = (mr - d) * 0.5, nx = (dx / d) * ov, nz = (dz / d) * ov;
+        a.x -= nx; a.z -= nz; b.x += nx; b.z += nz;
         a.mesh.position.set(a.x, a.y, a.z); b.mesh.position.set(b.x, b.y, b.z);
       }
     }
-
     for (let i = pts.length - 1; i >= 0; i--) {
       const p = pts[i]; p.age += s;
       if (p.age >= p.life) { p.mesh.parent?.remove(p.mesh); pts.splice(i, 1); continue; }
@@ -314,10 +274,8 @@ export function createVehicleManager(scene, world, rngInput) {
     }
     for (let i = skids.length - 1; i >= 0; i--) {
       const sm = skids[i]; sm.age += s;
-      if (sm.age >= sm.life) { sm.mesh.parent?.remove(sm.mesh); skids.splice(i, 1); }
-      else sm.mat.opacity = 0.58 * (1 - sm.age / sm.life);
+      if (sm.age >= sm.life) { sm.mesh.parent?.remove(sm.mesh); skids.splice(i, 1); } else sm.mat.opacity = 0.58 * (1 - sm.age / sm.life);
     }
   }
-
   return { vehicles: list, spawnVehicle, removeVehicle, clearDynamicVehicles, findNearestInteractable, damageVehicle, update };
 }

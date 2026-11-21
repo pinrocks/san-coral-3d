@@ -10,12 +10,11 @@ const MODES=[
 
 export function createInputAndCamera(camera,canvas,world) {
 const dSet=new Set(),jSet=new Set();
-let pLock=false,mL=false,mR=false,jmL=false,blockedUi=false;
+let pLock=false,mL=false,mR=false,jmL=false;
 let yaw=0,pitch=0.16,mIdx=0,shot=null,posed=false,shT=0,shS=0;
 
 const cPos=new THREE.Vector3(200,8,-100),cLook=new THREE.Vector3(200,2,-110);
 const dPos=new THREE.Vector3(),dLook=new THREE.Vector3();
-const fwdV=new THREE.Vector3(0,0,-1),rgtV=new THREE.Vector3(1,0,0);
 const aimO=new THREE.Vector3(),aimD=new THREE.Vector3(0,0,-1);
 
 const input={ keys:dSet,isDown:(c) => dSet.has(c),wasPressed:(c) => jSet.has(c),weaponSlot:0,yaw:0,pitch:0.16 };
@@ -24,16 +23,17 @@ const dlgOpen=() => Boolean(document.querySelector('dialog[open]'));
 window.addEventListener('keydown',(e) => {
  const c=e.code,sd=document.getElementById('start-dialog');
  if (sd?.open&&(c === 'KeyW'||c === 'Space'||c === 'Enter')) sd.close('play');
- if (c === 'KeyP') { jSet.add('KeyP');return;}
- if (c === 'KeyM'&&!e.metaKey&&!e.ctrlKey) jSet.add('KeyM');
- if (blockedUi||dlgOpen()) return;
- if (!dSet.has(c)) jSet.add(c);
+ if (c === 'KeyP') { if (!e.repeat) jSet.add('KeyP');return;}
+ if (c === 'KeyM'&&!e.metaKey&&!e.ctrlKey) { if (!e.repeat) jSet.add('KeyM');return;}
+ if (e.repeat&&c === 'Escape') return;
+ if (dlgOpen()) return;
+ if (!e.repeat&&!dSet.has(c)) jSet.add(c);
  dSet.add(c);
  if (c === 'Space'||c.startsWith('Arrow')) e.preventDefault();
 });
 window.addEventListener('keyup',(e) => dSet.delete(e.code));
 canvas?.addEventListener('mousedown',(e) => {
- if (blockedUi||dlgOpen()) return;
+ if (dlgOpen()) return;
  if (e.button === 0) {
    mL=jmL=true;
    if (!pLock) try { canvas.requestPointerLock?.()?.catch?.(() => {});} catch {}
@@ -42,7 +42,7 @@ canvas?.addEventListener('mousedown',(e) => {
 canvas?.addEventListener('contextmenu',(e) => e.preventDefault());
 window.addEventListener('mouseup',(e) => { if (e.button === 0) mL=false;if (e.button === 2) mR=false;});
 window.addEventListener('mousemove',(e) => {
- if (!blockedUi&&!dlgOpen()&&!shot&&(pLock||mR||mL)) {
+ if (!dlgOpen()&&!shot&&(pLock||mR||mL)) {
    yaw -= (e.movementX||0)*0.0026;
    pitch=Math.max(-0.32,Math.min(0.72,pitch+(e.movementY||0)*0.0022));
  }
@@ -51,7 +51,7 @@ document.addEventListener('pointerlockchange',() => { pLock=document.pointerLock
 window.addEventListener('blur',() => { dSet.clear();mL=mR=false;});
 
 function pollInput() {
- const b=blockedUi||dlgOpen(),has=(k) => !b&&dSet.has(k),jp=(k) => !b&&jSet.has(k);
+ const b=dlgOpen(),has=(k) => !b&&dSet.has(k),jp=(k) => !b&&jSet.has(k);
  const fw=has('KeyW')||has('ArrowUp'),bk=has('KeyS')||has('ArrowDown');
  const lf=has('KeyA')||has('ArrowLeft'),rg=has('KeyD')||has('ArrowRight');
  const sh=has('ShiftLeft')||has('ShiftRight'),sp=has('Space');
@@ -91,41 +91,36 @@ function update(dt,p) {
  const px=v ? v.x :p.x,py=v ? (v.y||0) :(p.y||0),pz=v ? v.z :p.z;
 
  if (v) {
-   const spd=Math.abs(v.speedKmh||(v.speed||0)*3.6);
-   if (!mR&&spd > 4) {
-     let d=v.heading-yaw;
-     while (d > Math.PI) d -= Math.PI*2;
-     while (d < -Math.PI) d += Math.PI*2;
-     yaw += d*Math.min(1,dt*4.2);
-   }
-   const dist=pr.cd+Math.min(2.4,spd*0.015)+(v.boosting ? 1.8 :0),ah=4.5+Math.min(4,spd*0.03);
-   dPos.set(px-Math.sin(yaw)*dist,py+pr.ch+pitch*3.2,pz-Math.cos(yaw)*dist);
-   dLook.set(px+Math.sin(yaw)*ah,py+1.35,pz+Math.cos(yaw)*ah);
-   const tf=pr.fov+Math.min(8,spd*0.045)+(v.boosting ? 5 :0);
-   if (Math.abs(camera.fov-tf) > 0.08) { camera.fov += (tf-camera.fov)*Math.min(1,dt*6);camera.updateProjectionMatrix();}
+  const spd=Math.abs(v.speedKmh||(v.speed||0)*3.6);
+  if (!mR&&spd > 4) {
+   let d=v.heading-yaw;while (d > Math.PI) d -= Math.PI*2;while (d < -Math.PI) d += Math.PI*2;
+   yaw += d*Math.min(1,dt*4.2);
+  }
+  const dist=pr.cd+Math.min(2.4,spd*0.015)+(v.boosting?1.8:0),ah=4.5+Math.min(4,spd*0.03);
+  dPos.set(px-Math.sin(yaw)*dist,py+pr.ch+pitch*3.2,pz-Math.cos(yaw)*dist);
+  dLook.set(px+Math.sin(yaw)*ah,py+1.35,pz+Math.cos(yaw)*ah);
+  const tf=pr.fov+Math.min(8,spd*0.045)+(v.boosting?5:0);
+  if (Math.abs(camera.fov-tf) > 0.08) { camera.fov += (tf-camera.fov)*Math.min(1,dt*6);camera.updateProjectionMatrix();}
  } else {
-   const aim=Boolean(input.aiming||p.aiming),dist=aim ? 3.25 :pr.fd,sh=aim ? 0.72 :0.32;
-   const cy=Math.cos(yaw),sy=Math.sin(yaw);
-   dPos.set(px-sy*dist-cy*sh,py+(aim ? 1.88 :pr.fh+pitch*2.4),pz-cy*dist+sy*sh);
-   dLook.set(px+sy*14-cy*(aim ? 0.35 :0.1),py+1.52-pitch*4.2,pz+cy*14+sy*(aim ? 0.35 :0.1));
-   const tf=aim ? 46 :pr.fov;
-   if (Math.abs(camera.fov-tf) > 0.08) { camera.fov += (tf-camera.fov)*Math.min(1,dt*8);camera.updateProjectionMatrix();}
+  const aim=Boolean(input.aiming||p.aiming),dist=aim?3.25:pr.fd,sh=aim?0.72:0.32;
+  const cy=Math.cos(yaw),sy=Math.sin(yaw);
+  dPos.set(px-sy*dist-cy*sh,py+(aim?1.88:pr.fh+pitch*2.4),pz-cy*dist+sy*sh);
+  dLook.set(px+sy*14-cy*(aim?0.35:0.1),py+1.52-pitch*4.2,pz+cy*14+sy*(aim?0.35:0.1));
+  const tf=aim?46:pr.fov;
+  if (Math.abs(camera.fov-tf) > 0.08) { camera.fov += (tf-camera.fov)*Math.min(1,dt*8);camera.updateProjectionMatrix();}
  }
-
  if (world) {
-   const col=world.resolveCircleCollision?.(dPos.x,dPos.z,1.1);
-   if (col&&typeof col.x === 'number') { dPos.x=col.x;dPos.z=col.z;}
-   const mg=(world.getGroundHeight ? world.getGroundHeight(dPos.x,dPos.z) :0)+1.25;
-   if (dPos.y < mg) dPos.y=mg;
+  const col=world.resolveCircleCollision?.(dPos.x,dPos.z,1.1);
+  if (col&&typeof col.x==='number') { dPos.x=col.x;dPos.z=col.z;}
+  const mg=(world.getGroundHeight?world.getGroundHeight(dPos.x,dPos.z):0)+1.25;
+  if (dPos.y < mg) dPos.y=mg;
  }
-
  if (!posed) { cPos.copy(dPos);cLook.copy(dLook);posed=true;}
  else { const a=1-Math.exp(-10.5*dt);cPos.lerp(dPos,a);cLook.lerp(dLook,a);}
-
  camera.position.copy(cPos);
  if (shT > 0) {
-   const m=shS*((shT=Math.max(0,shT-dt)) / 0.28);
-   camera.position.x += Math.sin(shT*65)*m;camera.position.y += Math.cos(shT*53)*m*0.7;
+  const m=shS*((shT=Math.max(0,shT-dt)) / 0.28);
+  camera.position.x += Math.sin(shT*65)*m;camera.position.y += Math.cos(shT*53)*m*0.7;
  }
  camera.lookAt(cLook);input.yaw=yaw;input.pitch=pitch;
 }

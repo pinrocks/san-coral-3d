@@ -4,62 +4,56 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>San Coral: High Tide</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="./styles.css">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 </head>
 <body>
 <canvas id="game-canvas" aria-label="San Coral 3D viewport"></canvas>
 <p id="sr-status" role="status" aria-live="polite"></p>
-
 <div id="hud-root">
 <div id="h-tl" class="hc">
-  <span class="b-dot"></span><span class="b-tit">SAN CORAL</span>
-  <span id="h-act">ACT I · FREE ROAM</span>
-  <button id="b-menu" aria-label="Open Safehouse Menu">[P] MENU</button>
+ <span class="b-dot"></span><span class="b-tit">SAN CORAL</span>
+ <span id="h-act">ACT I · FREE ROAM</span>
+ <button id="b-menu" aria-label="Open Safehouse Menu">[P] MENU</button>
 </div>
-
 <section id="m-ban" class="hc">
-  <div class="mb-t"><span id="m-tag">ACT I · MISSION 01</span><span id="m-tit">COASTAL HEAT</span></div>
-  <div class="mb-o"><span class="dm">◆</span><span id="m-obj">Reach Playa Coral Blvd</span></div>
+ <div class="mb-t"><span id="m-tag">ACT I · MISSION 01</span><span id="m-tit">COASTAL HEAT</span></div>
+ <div class="mb-o"><span class="dm">◆</span><span id="m-obj">Reach Playa Coral Blvd</span></div>
 </section>
-
 <aside id="h-tr">
-  <div id="w-box" class="hc" data-heat="0">
-    <div id="w-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
-    <span id="w-lbl">CLEAR · NO HEAT</span>
-  </div>
-  <div class="hc rb pc"><span id="h-cash">$12,500</span><span id="h-resp">RESPECT 140</span></div>
-  <div class="hc vc">
-    <div class="vr"><span class="ht">HP</span><div class="bt"><div id="hp-fill"></div></div><span id="hp-val">100</span></div>
-    <div class="vr"><span class="at">ARM</span><div class="bt"><div id="armor-fill"></div></div><span id="armor-val">50</span></div>
-  </div>
-  <div id="wp-box" class="hc">
-    <div class="wt"><span id="w-slot">[4]</span><span id="wp-name">CORSARIO CARBINE</span></div>
-    <div class="rb wb"><span id="wp-ammo">28 / 120</span><span class="dx">LMB FIRE · RMB AIM</span></div>
-  </div>
+ <div id="w-box" class="hc" data-heat="0">
+  <div id="w-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+  <span id="w-lbl">CLEAR · NO HEAT</span>
+ </div>
+ <div class="hc rb pc"><span id="h-cash">$12,500</span><span id="h-resp">RESPECT 140</span></div>
+ <div class="hc vc">
+  <div class="vr"><span class="ht">HP</span><div class="bt"><div id="hp-fill"></div></div><span id="hp-val">100</span></div>
+  <div class="vr"><span class="at">ARM</span><div class="bt"><div id="armor-fill"></div></div><span id="armor-val">50</span></div>
+ </div>
+ <div id="wp-box" class="hc">
+  <div class="wt"><span id="w-slot">[4]</span><span id="wp-name">CORSARIO CARBINE</span></div>
+  <div class="rb wb"><span id="wp-ammo">28 / 120</span><span class="dx">LMB FIRE · RMB AIM</span></div>
+ </div>
 </aside>
-
 <div id="aim-reticle" hidden><span class="rt rn"></span><span class="rt re"></span><span class="rt rs"></span><span class="rt rw"></span><span class="rdot"></span></div>
 <div id="w-prm" class="hc" hidden><kbd id="p-key">F</kbd><span id="p-txt">Steal Veloz GT</span></div>
 <div id="d-box" class="hc" hidden><span id="d-spk">MATEO RÍOS</span><span id="d-txt"></span></div>
 <div id="toast" class="hc" hidden><span id="t-tit"></span><span id="t-sub"></span></div>
-
 <div id="mm-wrap">
-  <div class="mm-f"><canvas id="mm-cv" width="420" height="420"></canvas><span class="mm-n">N</span></div>
-  <div class="hc rb mm-m"><span id="h-dist">PLAYA CORAL</span><span id="h-clk">16:35</span></div>
+ <div class="mm-f"><canvas id="mm-cv" width="420" height="420"></canvas><span class="mm-n">N</span></div>
+ <div class="hc rb mm-m"><span id="h-dist">PLAYA CORAL</span><span id="h-clk">16:35</span></div>
 </div>
-
 <div id="v-hud" class="hc" hidden>
-  <div class="rb sp-m">
-    <div class="sp-n"><span id="speed-val">148</span><span class="sp-u">KM/H</span></div>
-    <div class="sp-b"><span id="v-name">VELOZ GT</span><span id="gear-pill">GEAR 5</span></div>
-  </div>
-  <div class="nr"><span>NITRO</span><div class="bt"><div id="nitro-fill"></div></div></div>
-  <div class="rp"><span>♫</span><span id="r-txt">FM 98.5 COSTA TROPICAL</span><span class="dx">[R]</span></div>
+ <div class="rb sp-m">
+  <div class="sp-n"><span id="speed-val">148</span><span class="sp-u">KM/H</span></div>
+  <div class="sp-b"><span id="v-name">VELOZ GT</span><span id="gear-pill">GEAR 5</span></div>
+ </div>
+ <div class="nr"><span>NITRO</span><div class="bt"><div id="nitro-fill"></div></div></div>
+ <div class="rp"><span>♫</span><span id="r-txt">FM 98.5 COSTA TROPICAL</span><span class="dx">[R]</span></div>
 </div>
-
 <div id="f-hud" class="hc">
-  <span><kbd>WASD</kbd> Move</span><span><kbd>SHIFT</kbd> Sprint</span><span><kbd>F</kbd> Vehicle</span><span><kbd>M</kbd> Map</span>
+ <span><kbd>WASD</kbd> Move</span><span><kbd>SHIFT</kbd> Sprint</span><span><kbd>F</kbd> Vehicle</span><span><kbd>M</kbd> Map</span>
 </div>
 </div>
 
@@ -92,34 +86,25 @@
   <button class="sh-tab" data-tab="map">City Map</button>
 </nav>
 <div id="sh-body" data-active-tab="overview">
-  <section class="sh-s" data-section="saves">
-    <div class="rb shd">
-      <h3>PERSISTENT SAVE SLOTS</h3>
-      <div class="sbtns">
-        <button id="b-exp" class="btn-tiny">EXPORT</button>
-        <button id="b-imp" class="btn-tiny">IMPORT</button>
-        <input type="file" id="f-imp" accept="application/json" hidden>
-        <button id="b-heat" class="btn-tiny">LAY LOW ($500)</button>
-      </div>
-    </div>
-    <div id="s-list"></div>
-  </section>
-  <section class="sh-s" data-section="missions">
-    <div class="rb shd"><h3>9-MISSION CAMPAIGN</h3><span id="c-prog" class="pill">ACT II · 56%</span></div>
-    <div id="m-list"></div><div id="a-list"></div>
-  </section>
-  <section class="sh-s" data-section="upgrades">
-    <div class="rb shd"><h3>SAFEHOUSE UPGRADES &amp; FM RADIO</h3><span id="sh-cash" class="pill gold">$48,500</span></div>
-    <div id="u-grid" class="g2"></div>
-    <div class="rb rbar">
-      <button id="b-rad" class="btn-tiny turquoise">♫ FM 98.5 COSTA TROPICAL</button>
-      <button id="b-aud" class="btn-tiny">AUDIO: ON</button>
-    </div>
-  </section>
-  <section class="sh-s" data-section="map">
-    <div class="rb shd"><h3>SAN CORAL DISTRICT RADAR (CLICK WAYPOINT)</h3><span id="wp-lbl" class="pill">8 DISTRICTS</span></div>
-    <div class="mbox"><canvas id="sh-map" width="760" height="220"></canvas></div>
-  </section>
+ <section class="sh-s" data-section="saves">
+  <div class="rb shd"><h3>PERSISTENT SAVE SLOTS</h3>
+   <div class="sbtns"><button id="b-exp" class="btn-tiny">EXPORT</button><button id="b-imp" class="btn-tiny">IMPORT</button><input type="file" id="f-imp" accept="application/json" hidden><button id="b-heat" class="btn-tiny">LAY LOW ($500)</button></div>
+  </div>
+  <div id="s-list"></div>
+ </section>
+ <section class="sh-s" data-section="missions">
+  <div class="rb shd"><h3>9-MISSION CAMPAIGN</h3><span id="c-prog" class="pill">ACT II · 56%</span></div>
+  <div id="m-list"></div><div id="a-list"></div>
+ </section>
+ <section class="sh-s" data-section="upgrades">
+  <div class="rb shd"><h3>SAFEHOUSE UPGRADES &amp; FM RADIO</h3><span id="sh-cash" class="pill gold">$48,500</span></div>
+  <div id="u-grid" class="g2"></div>
+  <div class="rb rbar"><button id="b-rad" class="btn-tiny turquoise">♫ FM 98.5 COSTA TROPICAL</button><button id="b-aud" class="btn-tiny">AUDIO: ON</button></div>
+ </section>
+ <section class="sh-s" data-section="map">
+  <div class="rb shd"><h3>SAN CORAL DISTRICT RADAR (CLICK WAYPOINT)</h3><span id="wp-lbl" class="pill">8 DISTRICTS</span></div>
+  <div class="mbox"><canvas id="sh-map" width="760" height="220"></canvas></div>
+ </section>
 </div>
 </dialog>
 

@@ -8,55 +8,40 @@ export const RADIO_STATIONS=[
 ];
 
 export function createAudioEngine() {
-let ctx=null,master=null,nBuf=null;
-let eOscA,eOscB,eFilt,eGain,dFilt,dGain,sFilt,sGain,sirOsc,sirGain;
+let ctx=null,master=null,nBuf=null,eOscA,eOscB,eFilt,eGain,dFilt,dGain,sFilt,sGain,sirOsc,sirGain;
 let muted=false,stIdx=0,stepAcc=0,stepN=0,sirPh=0,surfPh=0,prevGear=1;
-
 function init() {
  if (ctx) return ctx;
- const AC=window.AudioContext || window.webkitAudioContext;
+ const AC=window.AudioContext||window.webkitAudioContext;
  if (!AC) return null;
  try { ctx=new AC();} catch { return null;}
- master=ctx.createGain();master.gain.value=muted ? 0 :0.34;master.connect(ctx.destination);
-
- const len=ctx.sampleRate*2;
- nBuf=ctx.createBuffer(1,len,ctx.sampleRate);
+ master=ctx.createGain();master.gain.value=muted?0:0.34;master.connect(ctx.destination);
+ const len=ctx.sampleRate*2;nBuf=ctx.createBuffer(1,len,ctx.sampleRate);
  const ch=nBuf.getChannelData(0);
  for (let i=0,s=918273;i < len;i++) { s=(s*1664525+1013904223) >>> 0;ch[i]=(s / 2147483648) - 1;}
-
  eFilt=ctx.createBiquadFilter();eFilt.type='lowpass';eFilt.frequency.value=220;
  eGain=ctx.createGain();eGain.gain.value=0.0001;
- eOscA=ctx.createOscillator();eOscA.type='sawtooth';
- eOscB=ctx.createOscillator();eOscB.type='triangle';
- eOscA.connect(eFilt);eOscB.connect(eFilt);eFilt.connect(eGain);eGain.connect(master);
- eOscA.start();eOscB.start();
-
- const loop=(type,freq,q,g0) => {
-   const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();
-   s.buffer=nBuf;s.loop=true;f.type=type;f.frequency.value=freq;f.Q.value=q;g.gain.value=g0;
-   s.connect(f);f.connect(g);g.connect(master);s.start();
-   return [f,g];
+ eOscA=ctx.createOscillator();eOscA.type='sawtooth';eOscB=ctx.createOscillator();eOscB.type='triangle';
+ eOscA.connect(eFilt);eOscB.connect(eFilt);eFilt.connect(eGain);eGain.connect(master);eOscA.start();eOscB.start();
+ const loop=(type,freq,q,g0)=>{
+  const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();
+  s.buffer=nBuf;s.loop=true;f.type=type;f.frequency.value=freq;f.Q.value=q;g.gain.value=g0;
+  s.connect(f);f.connect(g);g.connect(master);s.start();return [f,g];
  };
- [dFilt,dGain]=loop('bandpass',1350,3.2,0.0001);
- [sFilt,sGain]=loop('lowpass',420,1,0.018);
-
+ [dFilt,dGain]=loop('bandpass',1350,3.2,0.0001);[sFilt,sGain]=loop('lowpass',420,1,0.018);
  sirOsc=ctx.createOscillator();sirOsc.type='triangle';sirOsc.frequency.value=660;
- sirGain=ctx.createGain();sirGain.gain.value=0.0001;
- sirOsc.connect(sirGain);sirGain.connect(master);sirOsc.start();
+ sirGain=ctx.createGain();sirGain.gain.value=0.0001;sirOsc.connect(sirGain);sirGain.connect(master);sirOsc.start();
  return ctx;
 }
-
-const unlock=() => { const c=init();if (c?.state === 'suspended') c.resume().catch(() => {});};
-const ok=() => Boolean(ctx && ctx.state === 'running' && !muted);
-
+const unlock=()=>{ const c=init();if (c?.state==='suspended') c.resume().catch(()=>{});};
+const ok=()=>Boolean(ctx&&ctx.state==='running'&&!muted);
 function burst(dur,freq,q,gain,type='bandpass') {
- if (!ok() || !nBuf) return;
+ if (!ok()||!nBuf) return;
  const t=ctx.currentTime,s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();
  s.buffer=nBuf;f.type=type;f.frequency.setValueAtTime(freq,t);f.Q.value=q;
  g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
  s.connect(f);f.connect(g);g.connect(master);s.start(t);s.stop(t+dur+0.02);
 }
-
 function tone(f0,f1,dur,type,gain) {
  if (!ok()) return;
  const t=ctx.currentTime,o=ctx.createOscillator(),g=ctx.createGain();
